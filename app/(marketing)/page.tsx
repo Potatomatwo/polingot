@@ -9,7 +9,7 @@ import {
   SignUpButton,
   useUser,
 } from "@clerk/nextjs";
-import { Loader } from "lucide-react";
+import { Loader, MessageSquare } from "lucide-react";
 import Link from "next/link";
 
 
@@ -57,6 +57,17 @@ export default function Home() {
 </ClerkLoaded>
         </div>
       </div>
+
+      {/* Feedback button — fixed bottom right */}
+      <a
+        href="https://docs.google.com/forms/d/e/1FAIpQLSe0UtpaIl30FGqSEx0rImvYDGlS-e1mO3Ar3jITSTxe2uv5fg/viewform?usp=publish-editor"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="fixed bottom-6 right-6 bg-green-500 hover:bg-green-600 text-white font-bold px-4 py-3 rounded-full shadow-lg transition flex items-center gap-x-2 z-50"
+      >
+        <MessageSquare className="h-5 w-5" />
+        Feedback
+      </a>
     </div>
   );
 }
