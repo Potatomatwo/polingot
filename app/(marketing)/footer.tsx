@@ -16,23 +16,13 @@ export const Footer = () => {
                 </Button>
                 <Button size="lg" variant="ghost" className="w-full">
                     <Image 
-                    src="/images/DE.svg"
-                     alt="German" 
+                    src="/images/UK.svg"
+                     alt="English" 
                      height={32} 
                      width={40} 
                      className="mr-4 rounded-md"
                      />
-                    German
-                </Button>
-                <Button size="lg" variant="ghost" className="w-full">
-                    <Image 
-                    src="/images/CN.svg"
-                     alt="Chinese" 
-                     height={32} 
-                     width={40} 
-                     className="mr-4 rounded-md"
-                     />
-                    Chinese
+                    English
                 </Button>
             </div>
         </footer>
