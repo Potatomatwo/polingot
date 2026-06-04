@@ -103,10 +103,20 @@ export const reduceHearts = async (challengeId: number, isPracticeMode: boolean 
 
     // If in practice mode, don't reduce hearts
     if (isPracticeMode) {
+        console.log("Practice mode - no hearts reduced");
         return { success: true, practiceMode: true };
+    } //check for duplicates if you are enabling reduce hearts
+        const currentUserProgress = await getUserProgress(userId);
+    
+    if (!currentUserProgress) {
+        throw new Error("User progress not found.");
     }
-
-    const currentUserProgress = await getUserProgress(userId);
+        if (currentUserProgress.hearts === 0) {
+        return { error: "hearts" };
+    }
+    
+    //TEMPORARY DISABLING OF HEARTS, REMOVE THE BRACKETS IF NECESSARY
+    /* const currentUserProgress = await getUserProgress(userId);
     const userSubscription = await getUserSubscription();
 
     const challenge = await db.query.challenges.findFirst({
@@ -151,8 +161,9 @@ export const reduceHearts = async (challengeId: number, isPracticeMode: boolean 
     revalidatePath("/quests");
     revalidatePath("/leaderboard");
     revalidatePath("/lesson/");
-    
+    */
     return { success: true };
+    
 };
 
 export const refillHearts = async () => {

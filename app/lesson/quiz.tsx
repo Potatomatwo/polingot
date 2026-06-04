@@ -9,6 +9,7 @@ import { Challenge } from "./challenge";
 import { toast } from "sonner";
 import { Footer } from "./footer";
 import { upsertChallengeProgress } from "@/actions/challenge-progress";
+import { KanaChartModal } from "./kana-chart-modal";
 import { reduceHearts } from "@/actions/user-progress";
 import { useAudio, useWindowSize, useMount } from "react-use";
 import Image from "next/image";
@@ -30,6 +31,7 @@ type Props = {
         isActive: boolean;
     } | null;
     nextLessonId?: number;
+    courseId?: number;
 };
 
 const sanitizeAnswer = (str: string, lang: string) => {
@@ -44,6 +46,7 @@ export const Quiz = ({
     initialLessonChallenges,
     userSubscription,
     nextLessonId,
+    courseId,
 }: Props) => {
     // ============================================================
     // ALL HOOKS FIRST — no early returns before this section ends

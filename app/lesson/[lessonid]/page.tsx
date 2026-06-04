@@ -1,7 +1,8 @@
-import { getLesson, getUserProgress, getUserSubscription, getNextLesson } from "@/db/queries";
+import { getLesson, getUserProgress, getUserSubscription, getNextLesson, getUnit } from "@/db/queries";
 import { redirect } from "next/navigation";
 import { auth } from "@clerk/nextjs/server";
 import { Quiz } from "../quiz";
+import { KanaChartModal } from "../kana-chart-modal";
 
 type Props = {
     params: Promise<{
@@ -58,6 +59,13 @@ export default async function LessonIdPage({ params }: Props) {
         redirect("/learn");
     }
 
+    // Get the unit to find courseId
+    const unit = await getUnit(lesson.unitId);
+    const courseId = unit?.courseId;
+    console.log("7.9. Course ID:", courseId);
+    console.log("🔍 DEBUG courseId:");
+    console.log("Unit:", unit);
+    console.log("CourseId from unit:", courseId);
     const isPro = userSubscription?.isActive === true;
     const displayHearts = isPro ? 999 : userProgress.hearts;
 
@@ -82,10 +90,12 @@ export default async function LessonIdPage({ params }: Props) {
         userSubscription: userSubscription,
         isPro: userSubscription?.isActive,
         displayHearts: displayHearts,
-        nextLessonId: nextLesson?.id
+        nextLessonId: nextLesson?.id,
+        courseId: courseId
     });
     
     return (
+    <>
         <Quiz 
             initialLessonId={lesson.id}
             initialLessonChallenges={lesson.challenges}
@@ -93,6 +103,9 @@ export default async function LessonIdPage({ params }: Props) {
             initialPercentage={initialPercentage}
             userSubscription={userSubscription}
             nextLessonId={nextLesson?.id}
+            courseId={courseId}
         />
-    );
+        <KanaChartModal courseId={courseId} isFinished={false} />
+    </>
+);
 }
