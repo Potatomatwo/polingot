@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1777551903071,
+      "tag": "0000_wooden_richard_fisk",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777553429452,
+      "tag": "0001_lowly_maddog",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1777700237229,
+      "tag": "0002_sturdy_ultragirl",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1777786736191,
+      "tag": "0003_wide_bastion",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1777794532723,
+      "tag": "0004_acoustic_hellion",
+      "breakpoints": true
+    }
+  ]
+}
