@@ -1,6 +1,6 @@
 "use client";
 
-import { Admin, Resource, List, Datagrid, TextField, TopToolbar, ExportButton } from "react-admin";
+import { Admin, Resource } from "react-admin";
 import simpleRestProvider from "ra-data-simple-rest";
 import { CourseList } from "./course/list";
 import { CourseCreate } from "./course/create";
@@ -13,73 +13,54 @@ import { LessonEdit } from "./lesson/edit";
 import { LessonCreate } from "./lesson/create";
 import { ChallengeList } from "./challenge/list";
 import { ChallengeOptionCreate } from "./challengeOption/create";
-import {  ChallengeOptionEdit } from "./challengeOption/edit";
+import { ChallengeOptionEdit } from "./challengeOption/edit";
 import { ChallengeOptionList } from "./challengeOption/list";
 import { ChallengeCreate } from "./challenge/create";
 import { ChallengeEdit } from "./challenge/edit";
-import dynamic from "next/dynamic";
-
-const ImportButton = dynamic(
-    () => import("react-admin-import-csv").then((mod) => mod.ImportButton),
-    { ssr: false }
-);
 
 const dataProvider = simpleRestProvider("/api");
-const CustomList = (props: any) => {
+
+const App = () => {
     return (
-        <List {...props}>
-            <div className="flex justify-end mb-4">
-                <TopToolbar>
-                    <ExportButton />
-                    <ImportButton />
-                </TopToolbar>
-            </div>
-            {props.children}
-        </List>
+        <Admin dataProvider={dataProvider}>
+            <Resource
+                name="courses"
+                list={CourseList}
+                create={CourseCreate}
+                edit={CourseEdit}
+                recordRepresentation="title"
+            />
+            <Resource
+                name="units"
+                list={UnitList}
+                create={UnitCreate}
+                edit={UnitEdit}
+                recordRepresentation="title"
+            />
+            <Resource
+                name="lessons"
+                list={LessonList}
+                create={LessonCreate}
+                edit={LessonEdit}
+                recordRepresentation="title"
+            />
+            <Resource
+                name="challenges"
+                list={ChallengeList}
+                create={ChallengeCreate}
+                edit={ChallengeEdit}
+                recordRepresentation="title"
+            />
+            <Resource
+                name="challengeOptions"
+                list={ChallengeOptionList}
+                create={ChallengeOptionCreate}
+                edit={ChallengeOptionEdit}
+                recordRepresentation="text"
+                options={{ label: "Challenge Options" }}
+            />
+        </Admin>
     );
 };
 
-const App = () => {
-    return(
-    <Admin dataProvider={dataProvider}>
-        <Resource
-        name="courses"
-        list={CourseList}
-        create={CourseCreate}
-        edit={CourseEdit}
-        recordRepresentation="title"
-        />
-        <Resource
-        name="units"
-        list={UnitList}
-        create={UnitCreate}
-        edit={UnitEdit}
-        recordRepresentation="title"
-        />
-        <Resource
-        name="lessons"
-        list={LessonList}
-        create={LessonCreate}
-        edit={LessonEdit}
-        recordRepresentation="title"
-        />
-        <Resource
-        name="challenges"
-        list={ChallengeList}
-        create={ChallengeCreate}
-        edit={ChallengeEdit}
-        recordRepresentation="title"
-        /> 
-        <Resource
-        name="challengeOptions"
-        list={ChallengeOptionList}
-        create={ChallengeOptionCreate}
-        edit={ChallengeOptionEdit}
-        recordRepresentation="text"
-        options={{ label: "Challenge Options"}}
-        />
-    </Admin>
-    )
-};
-//TODO: ADD STORYMODE ONCE DONE
 export default App;
