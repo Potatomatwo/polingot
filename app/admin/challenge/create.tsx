@@ -15,7 +15,7 @@ export const ChallengeCreate = () => {
                 <TextInput source="question" validate={[required()]} label="Question" fullWidth 
                     helperText="Instructions for the user (e.g., 'Type what you hear')" />
                 <SelectInput 
-                    source="type" 
+                    source="type"
                     choices={challengeTypes} 
                     validate={[required()]} 
                     label="Challenge Type"

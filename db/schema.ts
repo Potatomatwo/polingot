@@ -4,6 +4,47 @@ import { Description } from "@radix-ui/react-dialog";
 import { relations } from "drizzle-orm";
 import { boolean,pgEnum,integer, pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
 
+// The passage/story for the exam
+export const examPassages = pgTable("exam_passages", {
+    id: serial("id").primaryKey(),
+    title: text("title").notNull(),
+    content: text("content").notNull(), // full text with [BLANK_1] markers
+    courseId: integer("course_id").references(() => courses.id, { onDelete: "cascade" }).notNull(),
+    timeLimit: integer("time_limit").notNull().default(30), // minutes
+    order: integer("order").notNull().default(0),
+});
+
+// Cloze answers (the blanks)
+export const examBlanks = pgTable("exam_blanks", {
+    id: serial("id").primaryKey(),
+    passageId: integer("passage_id").references(() => examPassages.id, { onDelete: "cascade" }).notNull(),
+    blankNumber: integer("blank_number").notNull(), // matches [BLANK_1], [BLANK_2] etc
+    correctAnswer: text("correct_answer").notNull(),
+    acceptedAnswers: text("accepted_answers"), // pipe-separated alternatives e.g. "ran|run|running"
+});
+
+// Open ended comprehension questions
+export const examQuestions = pgTable("exam_questions", {
+    id: serial("id").primaryKey(),
+    passageId: integer("passage_id").references(() => examPassages.id, { onDelete: "cascade" }).notNull(),
+    question: text("question").notNull(),
+    sampleAnswer: text("sample_answer").notNull().default(""),
+    markScheme: text("mark_scheme").notNull(), // what Claude uses to evaluate
+    maxMarks: integer("max_marks").notNull().default(3),
+    order: integer("order").notNull().default(0),
+});
+
+// Store user exam attempts
+export const examAttempts = pgTable("exam_attempts", {
+    id: serial("id").primaryKey(),
+    userId: text("user_id").notNull(),
+    passageId: integer("passage_id").references(() => examPassages.id, { onDelete: "cascade" }).notNull(),
+    blankScore: integer("blank_score").notNull().default(0),
+    comprehensionScore: integer("comprehension_score").notNull().default(0),
+    totalScore: integer("total_score").notNull().default(0),
+    timeTaken: integer("time_taken").notNull(), // seconds
+    completedAt: timestamp("completed_at").notNull().defaultNow(),
+});
 export const courses = pgTable("courses", {
   id: serial("id").primaryKey(), // auto increment
   title: text("title").notNull(),

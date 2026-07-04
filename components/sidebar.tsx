@@ -8,6 +8,7 @@ import {
     UserButton,
 } from "@clerk/nextjs";
 import { Loader } from "lucide-react";
+import { GraduationCap } from "lucide-react";
 
 
 type Props = {
@@ -45,6 +46,11 @@ export const Sidebar = ({ className }: Props) => {
         label= "shop" 
         href="/shop" 
         iconSrc="/shop.svg"
+        />
+        <SidebarItem
+        label="Exam"
+        href="/exam"
+        iconSrc="/exam.svg"
         />
         </div>
         <div className="p-4">

@@ -1,0 +1,22 @@
+import { NextResponse, NextRequest } from "next/server";
+import { auth } from "@clerk/nextjs/server";
+import db from "@/db/drizzle";
+import { examAttempts } from "@/db/schema";
+
+export async function POST(req: NextRequest) {
+    const { userId } = await auth();
+    if (!userId) return new NextResponse("Unauthorized", { status: 401 });
+
+    const body = await req.json();
+
+    await db.insert(examAttempts).values({
+        userId,
+        passageId: body.passageId,
+        blankScore: body.blankScore,
+        comprehensionScore: body.comprehensionScore,
+        totalScore: body.totalScore,
+        timeTaken: body.timeTaken,
+    });
+
+    return NextResponse.json({ success: true });
+}

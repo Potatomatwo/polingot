@@ -6,7 +6,7 @@ import { Upload } from "lucide-react";
 import Papa from "papaparse";
 
 type Props = {
-    resource: "courses" | "units" | "lessons" | "challenges" | "challengeOptions";
+    resource: "courses" | "units" | "lessons" | "challenges" | "challengeOptions" | "examPassages";
 };
 
 // Maps what foreign key fields each resource depends on
@@ -16,6 +16,7 @@ const RESOURCE_DEPS: Record<string, string[]> = {
     lessons: ["unit_id"],
     challenges: ["lesson_id"],
     challengeOptions: ["challenge_id"],
+    examPassages: ["course_id"],
 };
 
 // Maps snake_case CSV field names to camelCase API field names
@@ -26,6 +27,7 @@ const FIELD_MAP: Record<string, string> = {
     challenge_id: "challengeId",
     image_src: "imageSrc",
     audio_src: "audioSrc",
+    time_limit: "timeLimit",
 };
 
 // For challenge options, group by challenge and create challenge first
@@ -43,7 +45,7 @@ const transformRow = (row: any) => {
         const mappedKey = FIELD_MAP[key] || key;
 
         // Convert numeric strings
-        if (["courseId", "unitId", "lessonId", "challengeId", "order"].includes(mappedKey)) {
+        if (["courseId", "unitId", "lessonId", "challengeId", "order", "timeLimit"].includes(mappedKey)) {
             transformed[mappedKey] = value ? Number(value) : undefined;
             continue;
         }
@@ -71,6 +73,11 @@ const isCombinedChallengeOptionCSV = (headers: string[]) => {
     return headers.includes("option_text") && headers.includes("question");
 };
 
+// Detects if CSV is for exam passages (has blanks_json and questions_json)
+const isExamPassageCSV = (headers: string[]) => {
+    return headers.includes("blanks_json") && headers.includes("questions_json");
+};
+
 export const ImportButton = ({ resource }: Props) => {
     const [isLoading, setIsLoading] = useState(false);
     const notify = useNotify();
@@ -90,18 +97,19 @@ export const ImportButton = ({ resource }: Props) => {
                 const data = results.data as any[];
                 const headers = results.meta.fields || [];
 
-                 try {
-        // Use combined import if CSV has question+option_text columns
-        // regardless of which resource page we're on
-        if (isCombinedChallengeOptionCSV(headers)) {
-            await importChallengesWithOptions(data);
-        } else {
-            await importSimple(data, resource);
-        }
-            } catch (err) {
-                notify("Import failed unexpectedly", { type: "error" });
-                console.error(err);
-            }
+                try {
+                    // Route to the appropriate import function
+                    if (isExamPassageCSV(headers)) {
+                        await importExamPassages(data);
+                    } else if (isCombinedChallengeOptionCSV(headers)) {
+                        await importChallengesWithOptions(data);
+                    } else {
+                        await importSimple(data, resource);
+                    }
+                } catch (err) {
+                    notify("Import failed unexpectedly", { type: "error" });
+                    console.error(err);
+                }
 
                 setIsLoading(false);
                 refresh();
@@ -138,95 +146,132 @@ export const ImportButton = ({ resource }: Props) => {
         );
     };
 
+    const importExamPassages = async (data: any[]) => {
+        let successCount = 0;
+        let errorCount = 0;
+
+        for (const row of data) {
+            const { id, ...rest } = row;
+
+            try {
+                // Parse blanks_json and questions_json from CSV
+                const blanksJson = rest.blanks_json ? JSON.parse(rest.blanks_json) : [];
+                const questionsJson = rest.questions_json ? JSON.parse(rest.questions_json) : [];
+
+                const transformed = {
+                    title: rest.title,
+                    content: rest.content,
+                    courseId: Number(rest.course_id),
+                    timeLimit: Number(rest.time_limit) || 30,
+                    order: Number(rest.order) || 0,
+                    blanksJson: JSON.stringify(blanksJson),
+                    questionsJson: JSON.stringify(questionsJson),
+                };
+
+                await dataProvider.create("examPassages", { data: transformed });
+                successCount++;
+            } catch (error) {
+                console.error("Error importing exam passage:", row, error);
+                errorCount++;
+            }
+        }
+
+        notify(
+            `${successCount} exam passages imported.` +
+                (errorCount > 0 ? ` ${errorCount} failed.` : ""),
+            { type: errorCount > 0 ? "warning" : "success" }
+        );
+    };
+
     const importChallengesWithOptions = async (data: any[]) => {
-    let challengesCreated = 0;
-    let challengesReused = 0;
-    let optionsCreated = 0;
-    let errorCount = 0;
+        let challengesCreated = 0;
+        let challengesReused = 0;
+        let optionsCreated = 0;
+        let errorCount = 0;
 
-    const groups = new Map<string, any[]>();
-    for (const row of data) {
-        const key = `${row.question}__${row.lesson_id}__${row.order}`;
-        if (!groups.has(key)) groups.set(key, []);
-        groups.get(key)!.push(row);
-    }
+        const groups = new Map<string, any[]>();
+        for (const row of data) {
+            const key = `${row.question}__${row.lesson_id}__${row.order}`;
+            if (!groups.has(key)) groups.set(key, []);
+            groups.get(key)!.push(row);
+        }
 
-    for (const [, rows] of groups) {
-        const firstRow = rows[0];
+        for (const [, rows] of groups) {
+            const firstRow = rows[0];
 
-        try {
-            // 👇 Check if challenge already exists first
-            const existingChallenges = await dataProvider.getList("challenges", {
-                filter: { 
-                    lessonId: Number(firstRow.lesson_id),
-                    order: Number(firstRow.order),
-                },
-                pagination: { page: 1, perPage: 1 },
-                sort: { field: "id", order: "ASC" },
-            });
-
-            let challengeId: number;
-
-            if (existingChallenges.data.length > 0) {
-                // Reuse existing challenge
-                challengeId = existingChallenges.data[0].id;
-                challengesReused++;
-            } else {
-                // Create new challenge
-                const challengeResponse = await dataProvider.create("challenges", {
-                    data: {
-                        question: firstRow.question,
-                        type: firstRow.type,
+            try {
+                // 👇 Check if challenge already exists first
+                const existingChallenges = await dataProvider.getList("challenges", {
+                    filter: { 
                         lessonId: Number(firstRow.lesson_id),
                         order: Number(firstRow.order),
                     },
+                    pagination: { page: 1, perPage: 1 },
+                    sort: { field: "id", order: "ASC" },
                 });
-                challengeId = challengeResponse.data.id;
-                challengesCreated++;
-            }
 
-            // Delete existing options for this challenge before re-importing
-            const existingOptions = await dataProvider.getList("challengeOptions", {
-                filter: { challengeId },
-                pagination: { page: 1, perPage: 100 },
-                sort: { field: "id", order: "ASC" },
-            });
+                let challengeId: number;
 
-            for (const option of existingOptions.data) {
-                await dataProvider.delete("challengeOptions", { id: option.id });
-            }
-
-            // Create fresh options
-            for (const row of rows) {
-                if (!row.option_text) continue;
-                try {
-                    await dataProvider.create("challengeOptions", {
+                if (existingChallenges.data.length > 0) {
+                    // Reuse existing challenge
+                    challengeId = existingChallenges.data[0].id;
+                    challengesReused++;
+                } else {
+                    // Create new challenge
+                    const challengeResponse = await dataProvider.create("challenges", {
                         data: {
-                            text: row.option_text,
-                            correct: row.correct === "true" || row.correct === true,
-                            challengeId,
-                            imageSrc: row.image_src || null,
-                            audioSrc: row.audio_src || null,
+                            question: firstRow.question,
+                            type: firstRow.type,
+                            lessonId: Number(firstRow.lesson_id),
+                            order: Number(firstRow.order),
                         },
                     });
-                    optionsCreated++;
-                } catch (err) {
-                    console.error("Error creating option:", row, err);
-                    errorCount++;
+                    challengeId = challengeResponse.data.id;
+                    challengesCreated++;
                 }
-            }
-        } catch (err) {
-            console.error("Error processing challenge:", firstRow, err);
-            errorCount++;
-        }
-    }
 
-    notify(
-        `Done! ${challengesCreated} new challenges, ${challengesReused} reused, ${optionsCreated} options created.` +
-        (errorCount > 0 ? ` ${errorCount} failed.` : ""),
-        { type: errorCount > 0 ? "warning" : "success" }
-    );
-};
+                // Delete existing options for this challenge before re-importing
+                const existingOptions = await dataProvider.getList("challengeOptions", {
+                    filter: { challengeId },
+                    pagination: { page: 1, perPage: 100 },
+                    sort: { field: "id", order: "ASC" },
+                });
+
+                for (const option of existingOptions.data) {
+                    await dataProvider.delete("challengeOptions", { id: option.id });
+                }
+
+                // Create fresh options
+                for (const row of rows) {
+                    if (!row.option_text) continue;
+                    try {
+                        await dataProvider.create("challengeOptions", {
+                            data: {
+                                text: row.option_text,
+                                correct: row.correct === "true" || row.correct === true,
+                                challengeId,
+                                imageSrc: row.image_src || null,
+                                audioSrc: row.audio_src || null,
+                            },
+                        });
+                        optionsCreated++;
+                    } catch (err) {
+                        console.error("Error creating option:", row, err);
+                        errorCount++;
+                    }
+                }
+            } catch (err) {
+                console.error("Error processing challenge:", firstRow, err);
+                errorCount++;
+            }
+        }
+
+        notify(
+            `Done! ${challengesCreated} new challenges, ${challengesReused} reused, ${optionsCreated} options created.` +
+            (errorCount > 0 ? ` ${errorCount} failed.` : ""),
+            { type: errorCount > 0 ? "warning" : "success" }
+        );
+    };
 
     return (
         <Button
